@@ -1,5 +1,6 @@
 ---
 title: "IODS course project"
+author: Sila Arsin
 output:
   html_document:
     theme: cosmo

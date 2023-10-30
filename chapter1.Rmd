@@ -1,5 +1,4 @@
-
-# About the project
+# **Chapter 1** - About the project
 
 *Write a short description about the course and add a link to your GitHub repository here. This is an R Markdown (.Rmd) file so you should use R Markdown syntax.*
 
@@ -9,5 +8,7 @@
 date()
 
 ```
-The text continues here.
+*I am excited to learn more about R and data science in this course. I have a feeling I will feel much more confident about using R specifically after this! I found out about the course from MBDP upcoming courses announcement email.*
+
+<https://github.com/Mithaelin/IODS-project>
 
