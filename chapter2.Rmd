@@ -1,4 +1,4 @@
-# Insert chapter 2 title here
+# **Chapter 2** - 
 
 *Describe the work you have done this week and summarize your learning.*
 
@@ -10,4 +10,90 @@
 date()
 ```
 
-Here we go again...
+# Assignment 2
+```{r}
+# We are going to be working on students2014 data, first we need to read them into this R markdown:
+
+students2014 <- read.csv("https://raw.githubusercontent.com/KimmoVehkalahti/Helsinki-Open-Data-Science/master/datasets/learning2014.txt", sep = ",", header = T)
+
+# Now we get to have a look into this data and see what the dimensions and the structure is like
+
+dim(students2014)
+str(students2014)
+```
+We can see that there are 166 observations and 7 variables, meaning 166 data points/row length for 7 different columns. The data is on students of different ages and genders and their attitude, thoughts and performance on learning statistics. Data on attitude is a mean of 10 questions assessing students' attitude towards studying statistics. Stra column is the values for the strategic approaches for learning, surf is the data ranking surface thoughts on general concept of learning/studying new subjects. Points is the exam points students got.
+
+```{r}
+# Now we have a look at this data again with a graphical overview, where we get to look at all the variables plotted against each other and first we install the R packages we will be using.
+library(GGally)
+library(ggplot2)
+library(tidyr)
+
+ggpairs(students2014)
+
+summary(students2014)
+```
+Here just to test and play around with all the things I am learning, I want to also add colours for each gender and visualise and group data with that too for this I will use ifelse and set a colour for M and F. We get to now observe the exam results of the males(black) and females(red) based on their attitudes in a scatter plot.
+```{r}
+students2014$gender_color <- ifelse(students2014$gender == "M", "black", "red")
+
+plot(students2014$attitude, students2014$points, xlab = "attitude", ylab = "points", col=students2014$gender_color)
+
+# Let's now have a look at the distribution of the exam points with histograms with this we get to easily see that most of the students got between 20-25 points which is true as we knew the median was 23 and mean was 22.72. 
+
+hist(students2014$points, xlab = "Points", main = "Distribution of Points", col = "pink")
+
+# We can look into the strategic approaches and exam results of different genders.
+
+plot(students2014$stra, students2014$points, xlab = "stra", ylab = "points", col=students2014$gender_color)
+
+# We can have a look at the age distribution
+
+hist(students2014$age, xlab = "Age", main = "Age Distribution", col = "light green")
+```
+
+
+Now we have to choose three variables and see how they relate to the exam points. I will be working with attitude, deep and stra as likely those should positively correlate with higher points. We create a multipe linear regression model:
+```{r}
+model <- lm(points ~ attitude + stra + deep, data = students2014)
+par(mfrow = c(2,2))
+plot(model)
+
+#Let's see the summary
+summary(model)
+
+# Print coefficients and significance 
+coefs <- summary(model)$coefficients[, c("Estimate", "Pr(>|t|)")]
+print(coefs)
+```
+So here we see that for each unit of increase in the variables etimated value of increase is predicted for the points. For p value to mean there is a statistical significance it should be <0.05. Knowing all this it seems attitude overall is the only statistically significant variable for the exam points. This means we only keep attitude as the assignment asks us to remove the variables with no significance.
+```{r}
+model2 <- lm(points ~ attitude, data = students2014)
+
+summary(model2)
+```
+Here again we see for both intercept and the attitude p values are statistically significant. Multiple R-squared (0.1906) means that this regression model with the attitude explains about 19.06% of the variability in points. Adjusted R-squared accounts for the number of predictors and is slightly lower. Overall, with the positive coefficient values as well, this model suggests that the attitude is a significant predictor of the exam points.
+```{r}
+par(mfrow = c(2,2))
+plot(model2)
+```
+
+Residual vs. Fitted plot line is close/parallel to the horizontal 0 meaning there is no overall pattern emerging here.
+
+In the Q-Q Residual plot our points do follow the straight line for the most part. Overall mostly normally distributed apart from the values above 2 and below -1.
+
+Scale-location plot checks for homoscedasticity which means the spread of residuals is constant across all levels of the independent variable.In this case distribution of residuals seem like randomly scattered across the horizontal line which may suggest homoscedasticity.
+
+Residual vs leverage plot helps us find the influential observations/ outliers that may have impact on regression results. In this cas, there are a few points distant from the centre such as the marked 71 with very high residual and, 56 a nd 35 quite low.
+```{r}
+# Check student no 71
+students2014$points[71]
+students2014$attitude[71]
+
+# Check student no 35
+students2014$points[35]
+students2014$attitude[35]
+```
+Student number 71 had very high score but low attitude  and vice versa for the student number 35 for example, making them both outliers in this model.
+
+
