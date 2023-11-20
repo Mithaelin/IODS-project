@@ -1,0 +1,104 @@
+# **Chapter 3** 
+
+This is the chapter 3 - Assignment 3 
+
+Data Analysis - 3
+
+We obtain the alcohol consumption data provided for from the link below to read into alc_use table. Using the str() we get to see that there are 370 observations of the 35 variables.
+```{r}
+
+alc <- read.csv("https://raw.githubusercontent.com/KimmoVehkalahti/Helsinki-Open-Data-Science/master/datasets/alc.csv", sep=",", header = T)
+
+str(alc)
+
+```
+
+Here we will be investigating the high/low alcohol consumption based on various variables. For this I am choosing the variables as sex; likely males drink more, goout; the more they go out more likely they are to drink, famrel; low quality family relations would increase the chances of drinking, freetime; as they would have the time to enjoy theymselves more often.First we start with looking into different genders:
+```{r}
+table_sex_alc <- table(alc$sex, alc$high_use)
+table_sex_alc
+
+library(ggplot2)
+
+# Bar plot for sex vs. alc_use
+ggplot(alc, aes(x = sex, fill = high_use)) +
+  geom_bar(position = "stack", color = "black") +
+  labs(title = "Alcohol Consumption by Gender", x = "Sex", y = "Count") +
+  scale_fill_discrete(name = "High Use", labels = c("Low", "High"))
+
+
+```
+Indeed, we can see that overall males tend to have higher alcohol consumption.
+
+
+Here we look into the family relation scores (1-5) and how they relate to alcohol consumption. My hypothesis here does not seem to be true as high family relation score of 4 has the higher alcohol use.
+```{r}
+
+# Box plot for famrel vs. alc_use
+ggplot(alc, aes(x = as.factor(high_use), y = famrel)) +
+  geom_boxplot(color = "black") +
+  labs(title = "Alcohol Consumption vs. Family Relations", x = "Alcohol Use", y = "Family Relations Score")
+
+
+```
+This does not look so clear to me. As yes for highest score high_use=F however score of 4 which is quite high has high_use=T
+
+
+Free time vs alc_use:
+```{r}
+ggplot(alc, aes(x = freetime, fill = high_use)) +
+  geom_bar(position = "stack", color = "black") +
+  labs(title = "Alcohol Consumption based on Freetime", x = "Freetime Score", y = "Count") +
+  scale_fill_discrete(name = "High Use", labels = c("Low", "High"))
+
+
+```
+The connection between free-time and alcohol use also does not seem so clear with this plot.
+
+
+Let's look at goout vs. alc_use:
+```{r}
+# Box plot for goout vs. alc_use
+ggplot(alc, aes(x = as.factor(high_use), y = goout)) +
+  geom_boxplot(color = "black") +
+  labs(title = "Alcohol Consumption vs. Going Out", x = "Alcohol Use", y = "Go Out Score")
+
+```
+We can have a look at the consumption vs going out score with boxplots, and we can see easily that this hypothesis is also holding true as higher goout scores match with high_use values.
+
+Regression analysis for these hypotheses:
+```{r}
+# Fitting a logistic regression model
+model <- glm(high_use ~ sex + goout + famrel + freetime, data = alc, family = "binomial")
+
+# Summary of the fitted model
+summary(model)
+
+
+```
+The gender hypothesis is holding correct. The analysis is picking the M as "sexM" for this directly because it has a positive coeff of "0.9558" with a significant p-value (0.000236), showing that males have higher odds of having high alcohol use compared to females.
+
+Aligning with the initial hypothesis, coefficient of 0.7702 for goout suggests that as the frequency of going out increases, the odds of high alcohol consumption also increase. Also, goout vs. alcohol consumption p value is < 0.05 which means that likely this connection where high score for goout is linked with high_use = TRUE.
+
+For Famrel there is a negative coefficient of -0.4483 which actually indicates that low scores on family relations can be associated with higher odds of high_use=T. Supporting this p-value is also lower than 0.05  making it a statistically significant association. This is interesting as this was not super clear to me with boxplots.
+
+The coefficient for freetime is 0.1120 with a p-value (0.423896) which, contrary to the initial hypothesis, indicate that the variable might not be statistically significant in predicting high alcohol consumption based on the current model.
+
+I will use the predict() function to obtain predicted values based on the logistic regression model.
+```{r}
+
+# Getting predicted values from the model
+alc$predicted <- predict(model, type = "response") > 0.5
+
+# Creating a 2x2 cross-tabulation
+conf_matrix <- table(High_use = alc$high_use, Predicted = alc$predicted)
+conf_matrix
+
+```
+
+```{r}
+# Creating a plot showing actual vs. predicted values
+plot(alc$high_use, alc$predicted, xlab = "Actual", ylab = "Predicted", main = "Actual vs. Predicted Values")
+abline(a = 0, b = 1, col = "red")  # Add a line for perfect prediction
+
+```
