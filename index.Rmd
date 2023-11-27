@@ -13,7 +13,8 @@ output:
 
 ***
 
-# Introduction to Open Data Science - Course Project - W3
+#Introduction to Open Data Science - Course Project - W4
+
 
 ```{r child = "chapter1.Rmd"}
 # This will include Chapter 1 (that is updated in its own file) in the document.
@@ -26,8 +27,9 @@ output:
 ```
 
 ***
-```{r child = "chapter3.Rmd"}
-# This will include Chapter 2 (that is updated in its own file) in the document.
+
+```{r child = "chapter4.Rmd"}
+# This will include Chapter 4 (that is updated in its own file) in the document.
 ```
 
 ***

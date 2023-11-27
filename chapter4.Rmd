@@ -1,0 +1,180 @@
+# **Chapter 4**
+
+Here we are working on the Boston dataset with the MASS library. We will be analysing a dataset concerning the Boston suburban areas.
+
+There are 506 observations and 14 variables here. This data frame contains the following columns:
+
+crim: per capita crime rate by town.
+
+zn: proportion of residential land zoned for lots over 25,000 sq.ft.
+
+indus: proportion of non-retail business acres per town.
+
+chas: Charles River dummy variable (= 1 if tract bounds river; 0 otherwise).
+
+nox: nitrogen oxides concentration (parts per 10 million).
+
+rm: average number of rooms per dwelling.
+
+age: proportion of owner-occupied units built prior to 1940.
+
+dis: weighted mean of distances to five Boston employment centres.
+
+rad: index of accessibility to radial highways.
+
+tax: full-value property-tax rate per $10,000.
+
+ptratio: pupil-teacher ratio by town.
+
+black: Bk is the proportion of blacks by town.
+
+lstat: lower status of the population (percent).
+
+medv: median value of owner-occupied homes in $1000s.
+
+```{r}
+# Access the MASS package
+library(MASS)
+
+# Obtain the dataset Boston titled "Housing Values in Suburbs of Boston"
+data("Boston")
+
+# Checking how the Boston dataset looks like
+str(Boston)
+dim(Boston)
+summary(Boston)
+
+# Matrix of the variables
+pairs(Boston)
+
+```
+Let's have a quick look at some of the data with some histograms and scatterplots
+```{r}
+# Histograms for crime rates:
+hist(Boston$crim)
+```
+Here,the histogram drawn using the crime per capita rates, skews left (negatively) clearly, showing that overall crime rate in the most of the studied regions are low.
+
+```{r}
+# Scatterplot for average room numbers per property vs median value of owner occupied homes:
+plot(Boston$rm, Boston$medv)
+
+```
+Here we get to look at the median house values and the number of rooms. There is a large variation, however we can see that most of the houses have around 6 rooms and the median value is around 20k.
+
+Now we standardize the dataset and see compare how the crime rate variable looks like when standardized.
+```{r}
+boston_s <- scale(Boston)
+
+summary(boston_s)
+
+class(boston_s) # here boston_s is matrix/ array type data, we will make it into a dataset.
+
+boston_s <-as.data.frame(boston_s) # now it is a data frame
+
+# check how standardized crime values look like compared to previously:
+
+summary(boston_s$crim)
+summary(Boston$crim)
+
+# Max was 88.9 and when standardized it is 9.92. Now all our variables are on a more directly comparable scale.
+
+# Quantile variable creation:
+bins <- quantile(boston_s$crim)
+bins
+
+# Turn that into a categorical variable 'crime'
+boston_s$crime <- cut(boston_s$crim, breaks = bins, labels = c("low", "med_low", "med_high", "high"))
+
+# look at the table of the new factor crime
+summary(boston_s$crime)
+
+# remove original crim from the scaled dataset
+boston_s <- dplyr::select(boston_s, -crim)
+
+# Now we have to divide the dataset to train and test sets so that 80% of the data belongs to the train set.
+
+# number of rows in the Boston dataset 
+str(boston_s) # it is 506
+
+n <- 506
+
+# choose randomly 80% of the rows
+ind <- sample(n,  size = n * 0.8, replace = FALSE)
+
+# create train set
+train <- boston_s[ind, ]
+
+# create test set 
+test <- boston_s[-ind, ]
+
+# save the correct classes from test data
+correct_classes <- test$crime
+
+# remove the crime variable from test data
+test <- dplyr::select(test, -crime)
+
+```
+
+Now we fit the linear discriminant analysis on the train set using the categorical crime rate as the target variable and all the other variables in the dataset as predictor variables. Draw the LDA (bi)plot. 
+
+```{r}
+# linear discriminant analysis
+lda.fit <- lda(crime ~ ., data = train)
+
+# print the lda.fit object
+lda.fit
+
+# the function for lda biplot arrows
+lda.arrows <- function(x, myscale = 1, arrow_heads = 0.1, color = "red", tex = 0.75, choices = c(1,2)){
+  heads <- coef(x)
+  graphics::arrows(x0 = 0, y0 = 0, 
+         x1 = myscale * heads[,choices[1]], 
+         y1 = myscale * heads[,choices[2]], col=color, length = arrow_heads)
+  text(myscale * heads[,choices], labels = row.names(heads), 
+       cex = tex, col=color, pos=3)
+}
+
+# target classes as numeric
+correct_classes <- as.numeric(train$crime)
+
+# plot the lda results (select both lines and execute them at the same time!)
+plot(lda.fit, dimen = 2)
+
+lda.arrows(lda.fit, myscale = 1)
+
+```
+
+```{r}
+library(GGally)
+library(ggplot2)
+
+data("Boston")
+# Scale the whole original dataset Boston
+bosnew <- scale(Boston)
+summary(bosnew)
+# Calculate distances between observations (using Euclidean distance)
+distances <- dist(bosnew)
+
+# Run k-means algorithm on the dataset
+# For initial exploration, choose an arbitrary number of clusters, e.g., k = 4
+k <- 4
+kmeans_result <- kmeans(bosnew, centers = k)
+
+# Elbow method to determine the optimal number of clusters
+wss <- numeric(10)  # Within-cluster sum of squares
+for (i in 1:10) {
+  kmeans_temp <- kmeans(bosnew, centers = i)
+  wss[i] <- kmeans_temp$tot.withinss
+}
+
+# Plot the Elbow curve
+plot(1:10, wss, type = "b", xlab = "Number of Clusters (k)", ylab = "Within-cluster Sum of Squares (WSS)", main = "Elbow Method")
+
+# 8 seems to be the optimal number of clusters. Re-run k-means with the optimal number of clusters
+optimal_k <- 8 #Choose the optimal number of clusters based on the Elbow plot
+kmeans_optimal <- kmeans(bosnew, centers = optimal_k)
+
+pairs(bosnew, col = kmeans_optimal$cluster)
+
+```
