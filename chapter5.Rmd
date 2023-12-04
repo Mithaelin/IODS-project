@@ -1,0 +1,122 @@
+# *Chapter 5*
+
+We are working on the Human Development Index data which explores different aspects of human life qualities in different countries. Along with the data also discriminates between genders in order to explore disadvantages/advantages.
+
+We download the data and read it into human.
+```{r, echo=FALSE}
+library(readr)
+human <- read_csv("https://raw.githubusercontent.com/KimmoVehkalahti/Helsinki-Open-Data-Science/master/datasets/human2.csv")
+
+human
+
+```
+We need to move the country names to row names show a graphical overview and summaries of this data and interpret it.
+```{r, echo=FALSE}
+# Install the required packages for the table and visualisations.
+library(GGally)
+library(corrplot)
+library(tibble)
+
+# Make the Country names to rownames
+human_ <- column_to_rownames(human, "Country")
+
+# visualize the 'human_' variables
+pairs(human_)
+
+# compute the correlation matrix and visualize it with corrplot
+H <- cor(human_)
+corrplot(H, type = "lower", order = "hclust", tl.col = "black", tl.srt = 45)
+
+```
+We will need the full names of the variables: 
+"Country" = Country name
+
+Health and knowledge:
+
+"GNI" = Gross National Income per capita
+"Life.Exp" = Life expectancy at birth
+"Edu.Exp" = Expected years of schooling 
+"Mat.Mor" = Maternal mortality ratio
+"Ado.Birth" = Adolescent birth rate
+
+Empowerment:
+
+"Parli.F" = Percetange of female representatives in parliament
+"Edu2.F" = Proportion of females with at least secondary education
+"Edu2.M" = Proportion of males with at least secondary education
+"Labo.F" = Proportion of females in the labour force
+"Labo.M" " Proportion of males in the labour force
+
+Overall the correlations seem quite logical. As the higher education and life expectancy relate to higher Gross national income. And these correlate with lower maternal mortalities and adolescent births. Interestingly there is not much connection between female representatives in parliment or female to male ratio in work forces, these seem to be independent of the other factors.
+
+PCA analysis on the non standardized data.
+```{r, echo=FALSE}
+pca_human <- prcomp(human_)
+
+# draw a biplot of the principal component representation and the original variables
+biplot(pca_human, choices = 1:2, cex= c(0.8, 1)) #this looks confusing and difficult to look at so I think standardising will help.
+
+```
+
+PCA analysis of the standardized data:
+
+```{r, echo=FALSE}
+humanstd <- scale(human_) #now the data is standardized
+
+pca_humanstd <- prcomp(humanstd) #PCA analysis set 
+
+biplot(pca_humanstd, choices = 1:2, cex= c(0.8, 1.2)) # plot the pca analysis of the standardized data 
+
+```
+
+
+Tea Questionnaire:
+```{r, echo=FALSE}
+library(FactoMineR)
+
+tea <- read.csv("https://raw.githubusercontent.com/KimmoVehkalahti/Helsinki-Open-Data-Science/master/datasets/tea.csv", stringsAsFactors = TRUE)
+
+view(tea) #opens another tab with the all of the table shown.
+
+# We select the columns to investigate:
+library(dplyr)
+library(tidyr)
+
+# column names to keep in the dataset
+keep_columns <- c("Tea", "How", "sugar", "where", "lunch")
+
+# select the 'keep_columns' to create a new dataset
+tea_time <- select(tea, keep_columns)
+
+# look at the summaries and structure of the data
+summary(tea_time)
+str(tea_time)
+
+# Let's draw some plots to look at how these variables look like:
+tea_time_long <- tea_time %>%
+  pivot_longer(cols = everything(), names_to = "Variable", values_to = "Value")
+
+tea_plot <- tea_time_long %>%
+  ggplot(aes(x = Value, fill = Variable)) +
+  geom_bar() +
+  facet_wrap(~Variable, scales = "free") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8))
+
+tea_plot
+```
+It seems like most people drink their earl grey alone very rarely at lunch. People who prefer their tea with sugar are as many as the ones who prefer it without. Most of the people get their tea from a chain store.
+
+
+```{r, echo=FALSE}
+
+# Now we do the MCA on tea data and draw the plots to visualize:
+mca <- MCA(tea_time, graph = FALSE)
+
+# summary of the model
+summary(mca)
+
+# visualize MCA
+plot(mca, invisible=c("ind"), graph.type = "classic", habillage = "quali")
+
+```
+
