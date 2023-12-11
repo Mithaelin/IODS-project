@@ -37,5 +37,10 @@ output:
 # This will include Chapter 4 (that is updated in its own file) in the document.
 ```
 
-(more chapters to be added similarly as we proceed with the course!)
+***
+```{r child = "chapter6.Rmd"}
+# This will include Chapter 4 (that is updated in its own file) in the document.
+```
+
+(All done! - I am missing chapter 3 here beacause it has been giving an error while knitting and stopping the process :/)
 

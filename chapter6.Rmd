@@ -1,0 +1,254 @@
+# Chapter 6
+
+This is the last chapter and the assignment of this course:
+For this analysis section we will be working with the BPRS and RATS data but swap the methods used for each previously in the exercise set 6.
+
+Part 1: RATS DATASET
+We are starting with the RATS dataset.This is from a nutrition study conducted in three groups of rats (Crowder and Hand, 1990). The rats were grouped into three and were given different diets and their weights were measured over a 9 week period.
+
+
+```{r}
+RATS <- read.table("https://raw.githubusercontent.com/KimmoVehkalahti/MABS/master/Examples/data/rats.txt", header = TRUE, sep = '\t')
+
+dim(RATS) # 16 observations and 13 variables.
+RATS
+# Have to turn the categorical data into factors:
+RATS$ID = factor(RATS$ID)
+RATS$Group = factor(RATS$Group)
+
+# Turn RATS into RATSL by turning it into a long data set
+library(dplyr)
+library(tidyr)
+
+# Convert data to long form
+RATSL <- pivot_longer(RATS, cols = -c(ID, Group), 
+                      names_to = "WD",
+                      values_to = "Weight") %>% 
+         mutate(Time = as.integer(substr(WD,3,4))) %>%
+         arrange(Time)
+
+# Have a look at the data 
+dim(RATSL) # 176 observations and 5 variables. Successfully turned into longer dataset.
+RATSL
+
+```
+
+```{r}
+#Access the packages
+library(ggplot2)
+
+summary(RATSL)
+
+# Draw the plot
+ggplot(RATSL, aes(x = Time, y = Weight, linetype = ID)) +
+  geom_line() +
+  scale_linetype_manual(values = rep(1:10, times=4)) +
+  facet_grid(. ~ Group, labeller = label_both) +
+  theme(legend.position = "none") + 
+  scale_y_continuous(limits = c(min(RATSL$Weight), max(RATSL$Weight)))
+
+# Trying also a boxplot:
+ggplot(RATSL, aes(x = Group, y = Weight, fill = Group)) +
+  geom_boxplot() +
+  facet_wrap(~WD, scales = "free") +
+  scale_fill_discrete(name = "Group") +
+  theme_minimal()
+
+```
+
+Here we can see that the group 1 treat ment is doing the worst in terms of weight gain and group 3 is kind of the best as it is consistently doing better with weight increase.
+
+```{r}
+library(dplyr)
+library(tidyr)
+
+# Standardize data
+RATSS <- RATSL %>%
+  group_by(Time) %>%
+  mutate(stdwght = (Weight - mean(Weight))/sd(Weight)) %>%
+  ungroup()
+
+# Glimpse the data
+glimpse(RATSS)
+
+# Calculate mean and standard error for Group and Time
+RATSS_s <- RATSL %>%
+  group_by(Group, Time) %>%
+    summarise(mean = mean(Weight), n = n(), se = sd(Weight)/sqrt(n)) %>%
+  ungroup()
+
+# Glimpse the data
+glimpse(RATSS_s)
+
+# Plot the mean profiles with error bars
+library(ggplot2)
+
+# Plotting the mean profiles
+ggplot(RATSS_s, aes(x = Time, y = mean, linetype = Group, shape = Group)) +
+  geom_line() +
+  scale_linetype_manual(values = c(1,2,3)) +
+  geom_point(size=3) +
+  scale_shape_manual(values = c(1,2,3)) +
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se, linetype="1"), width=0.3) +
+  theme(legend.position = c(0.8,0.5)) +
+  scale_y_continuous(name = "mean(weight) +/- se(weight)")
+
+```
+
+```{r}
+# We have a look for outliers
+library(dplyr)
+library(ggplot2)
+
+# Create a summary data by Group and WD with mean as the summary variable
+
+RATSLs <- RATSL %>%
+  filter(Time > 1) %>%
+  group_by(Group, ID) %>%
+  summarise(mean=mean(Weight) ) %>%
+  ungroup()
+
+# Glimpse the data
+glimpse(RATSLs)
+
+# Drawing a boxplot for checking outliers
+ggplot(RATSLs, aes(x = Group, y = mean)) +
+  geom_boxplot() +
+  stat_summary(fun = "mean", geom = "point", shape=23, size=4, fill = "white") +
+  scale_y_continuous(name = "mean(weight)")
+
+# New plot with filtered outliers
+RATSLs1 <- RATSLs %>%
+  filter(mean<550 & mean>250 & mean!=495.2)
+
+ggplot(RATSLs1, aes(x = Group, y = mean)) +
+  geom_boxplot() +
+  stat_summary(fun = "mean", geom = "point", shape=23, size=4, fill = "white") +
+  scale_y_continuous(name = "mean(weight)")
+
+```
+
+```{r}
+# Looking for a statistical difference between the different goups of rats diets
+
+# Add the baseline from the original data as a new variable to the summary data
+RATSLs2 <- RATSLs %>%
+  mutate(baseline = RATS$WD1)
+
+# Get rid of outliers again
+RATSLs2 <- RATSLs2 %>%
+  filter(mean<550 & mean>250 & mean!=495.2)
+
+# Fit the linear model with the mean as the response 
+Ratfit <- lm(mean ~ baseline + Group, data = RATSLs2)
+
+# Compute the analysis of variance table for the fitted model with anova()
+anova(Ratfit)
+
+
+```
+
+PART 2: BPRS DATASET:
+
+Here we will work on longitudinal clinical trial data from Davis 2002, involving 40 men under suspicion of schizophrenia. The study spanned 8 weeks and utilized the Brief Psychiatric Rating Scale (BPRS) to assess 18 symptoms, including hostility, suspiciousness, and hallucinations. Ratings ranged from 1 (not present) to a maximum of 7 (severe)
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+# First let's get this data:
+rm(list=ls()) # clear variables
+BPRS <- read.table("https://raw.githubusercontent.com/KimmoVehkalahti/MABS/master/Examples/data/BPRS.txt", sep =" ", header = T)
+
+# Let's have a look at this dataset BPRS
+names(BPRS)
+str(BPRS)
+
+dim(BPRS) #This dataset comes with 40 observations and 11 variables.
+
+# Print out summaries of the variables
+summary(BPRS)
+
+# We will start with turning this data into a dataframe type:
+BPRSL <- as.data.frame(BPRS)
+
+# We will turn this dataframe into a longitudinal data and extract the week number
+BPRSL <- pivot_longer(BPRSL, cols = -c(treatment, subject), names_to = "weeks", values_to = "bprs") %>% arrange(weeks)
+BPRSL$week <- as.integer(substr(BPRSL$weeks, 5, 5))
+
+# "Treatment" and the "subject" are categorical so will be turned into factors:
+BPRSL$treatment <- as.factor(BPRSL$treatment)
+BPRSL$subject <- as.factor(BPRSL$subject)
+
+# Have a look at the this data now:
+
+str(BPRSL)
+summary(BPRSL)
+
+# Visualize the data using ggplot
+ggplot(BPRSL, aes(x = week, y = bprs, linetype = subject)) +
+  geom_line() +
+  scale_linetype_manual(values = rep(1:10, times = 4)) +
+  facet_grid(. ~ treatment, labeller = label_both) +
+  theme(legend.position = "none") + 
+  scale_y_continuous(limits = c(min(BPRSL$bprs), max(BPRSL$bprs)))
+
+# Plot the RATSL data
+
+library(ggplot2)
+ggplot(BPRSL, aes(x = week, y = bprs, group = interaction(treatment, subject))) +
+  geom_line(aes(linetype = treatment))+
+  scale_x_continuous(name = "week")+
+  scale_y_continuous(name = "bprs")+
+  theme(legend.position = "top")
+```
+
+```{r}
+library(lme4)
+
+# create a regression model BPRS
+BPRS_ref1 <- lm(bprs ~ week + treatment, data = BPRSL)
+
+# print out a summary of the model
+summary(BPRS_ref1)
+
+BPRS_ref2 <- lmer(bprs ~ week + treatment + (1 | subject), data = BPRSL, REML = FALSE)
+
+# Print the summary of the model
+summary(BPRS_ref2)
+
+BPRS_ref3 <- lmer(bprs ~ week + treatment + (week | subject), data = BPRSL, REML = FALSE)
+
+summary(BPRS_ref3)
+
+# perform an ANOVA test on the models tested
+anova(BPRS_ref2, BPRS_ref1)
+
+anova(BPRS_ref3,BPRS_ref2)
+
+```
+
+```{r}
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+# Now we look at the plots of these models:
+Fitted <- fitted(BPRS_ref3)
+
+# Add the fitted model as a column
+BPRSL$Fitted <- Fitted
+
+# Create the fitted model plot of BPRSL data
+ggplot(BPRSL, aes(x = week, y = Fitted, group = interaction(treatment, subject))) +
+  geom_line(aes(linetype = treatment, colour=treatment)) +
+  scale_x_continuous(name = "Time (weeks)", breaks = seq(0, 60, 20)) +
+  scale_y_continuous(name = "Fitted BPRS") +
+  theme(legend.position = "top")  +
+  ggtitle("Fitted")
+
+```
+ 
+ Can clearly see that both treatments are effectively reducing the symptoms.
